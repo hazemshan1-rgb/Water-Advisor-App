@@ -1,3 +1,10 @@
+import { SiteList } from "@/components/SiteList";
+
 export default function HomePage() {
-  return <main className="p-6">Water Advisor — scaffold placeholder, replaced in Task 12.</main>;
+  return (
+    <main className="max-w-2xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold mb-6">Water Advisor</h1>
+      <SiteList />
+    </main>
+  );
 }
