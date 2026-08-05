@@ -22,24 +22,34 @@ export function checkSpeciesCompatibility(
     }
 
     const targetNaK = species.idealIonicRatios["Na:K"];
-    if (targetNaK !== undefined && params.sodiumMgL !== undefined && params.potassiumMgL) {
-      const actualRatio = params.sodiumMgL / params.potassiumMgL;
-      const deviationFraction = Math.abs(actualRatio - targetNaK) / targetNaK;
-      if (deviationFraction > RATIO_TOLERANCE_FRACTION) {
+    if (targetNaK !== undefined && params.sodiumMgL !== undefined && params.potassiumMgL !== undefined) {
+      if (params.potassiumMgL === 0) {
         deviations.push(
-          `Na:K ratio is ${actualRatio.toFixed(1)}:1, versus ${species.commonName}'s target of ${targetNaK}:1 (Ch.3 Part 2).`
+          `potassium reading is 0 mg/L — Na:K ratio cannot be computed and this is itself a critical deviation from ${species.commonName}'s target of ${targetNaK}:1.`
         );
+      } else {
+        const actualRatio = params.sodiumMgL / params.potassiumMgL;
+        const deviationFraction = Math.abs(actualRatio - targetNaK) / targetNaK;
+        if (deviationFraction > RATIO_TOLERANCE_FRACTION) {
+          deviations.push(
+            `Na:K ratio is ${actualRatio.toFixed(1)}:1, versus ${species.commonName}'s target of ${targetNaK}:1 (Ch.3 Part 2).`
+          );
+        }
       }
     }
 
-    const riskLevel: "low" | "moderate" | "high" =
-      deviations.length === 0 ? "low" : deviations.length === 1 ? "moderate" : "high";
-
-    // Salinity outside tolerance range is always high risk regardless of count.
+    // Salinity outside tolerance range is always high risk regardless of other deviations.
     const outOfTolerance = params.salinityPpt < minPpt || params.salinityPpt > maxPpt;
+    const riskLevel: "low" | "moderate" | "high" = outOfTolerance
+      ? "high"
+      : deviations.length === 0
+        ? "low"
+        : deviations.length === 1
+          ? "moderate"
+          : "high";
 
     result[id] = {
-      riskLevel: outOfTolerance ? "high" : riskLevel,
+      riskLevel,
       deviations,
     };
   }

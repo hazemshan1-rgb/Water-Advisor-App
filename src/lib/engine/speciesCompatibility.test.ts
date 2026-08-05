@@ -28,4 +28,11 @@ describe("checkSpeciesCompatibility", () => {
     const result = checkSpeciesCompatibility(params, ["unknown-species"]);
     expect(result["unknown-species"]).toBeUndefined();
   });
+
+  it("flags zero potassium as a critical deviation, not a silent skip", () => {
+    const params: WaterParameters = { salinityPpt: 15, pH: 7.8, sodiumMgL: 4500, potassiumMgL: 0 };
+    const result = checkSpeciesCompatibility(params, ["vannamei"]);
+    expect(result.vannamei.deviations.some((d) => d.includes("potassium reading is 0"))).toBe(true);
+    expect(result.vannamei.riskLevel).toBe("moderate");
+  });
 });
