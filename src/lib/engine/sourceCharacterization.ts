@@ -152,6 +152,31 @@ function checkNonContaminantRedFlags(params: WaterParameters): Anomaly[] {
     }
   }
 
+  // Ch.7 §3/§4/§5 in-pond failure-mode watch tiers. The corresponding
+  // critical-tier matches (DO_CRASH_THRESHOLD_MGL, TAN_TOXICITY_THRESHOLD_MGL,
+  // NITRITE_TOXICITY_THRESHOLD_MGL) live in failureModeMatching.ts -- same
+  // dual-layer pattern already used for potassium above.
+  if (params.doMgL !== undefined && params.doMgL < t.doWatchMgL) {
+    flags.push({
+      message: `Dissolved oxygen at ${params.doMgL} mg/L is below the ${t.doWatchMgL} mg/L watch line — growth is limited even without a crash. Confirm this is a dawn reading, not midday (Ch.7 §3).`,
+      severity: "watch",
+    });
+  }
+
+  if (params.tanMgL !== undefined && params.tanMgL > t.tanWatchMgL) {
+    flags.push({
+      message: `Total ammonia nitrogen at ${params.tanMgL} mg/L is above the ${t.tanWatchMgL} mg/L watch line — test alongside pH and temperature, both change how toxic this reading actually is (Ch.7 §4).`,
+      severity: "watch",
+    });
+  }
+
+  if (params.nitriteMgL !== undefined && params.nitriteMgL > t.nitriteWatchMgL) {
+    flags.push({
+      message: `Nitrite-nitrogen at ${params.nitriteMgL} mg/L is above the ${t.nitriteWatchMgL} mg/L standing target — tolerance depends heavily on chloride/salinity; a source that tested low on chloride has far less protective margin (Ch.6 §3, Ch.7 §5).`,
+      severity: "watch",
+    });
+  }
+
   return flags;
 }
 

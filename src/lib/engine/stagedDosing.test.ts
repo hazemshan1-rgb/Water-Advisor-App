@@ -49,6 +49,26 @@ describe("stageDosing", () => {
     expect(steps[0].instructions).not.toContain("5-10 ppt");
   });
 
+  it("flags stage 1 as critical and discloses the current=0 assumption when assumedZeroCurrent is set", () => {
+    // Found during field-testing, 2026-08-05: an untested mineral silently
+    // defaulted to current=0, producing a large, confident-looking dose
+    // with no inline warning that the number rests on an assumption.
+    const steps = stageDosing([
+      { compound: "X", quantityKg: 5000, forParameter: "K test", assumedZeroCurrent: true },
+    ]);
+    expect(steps[0].severity).toBe("critical");
+    expect(steps[0].instructions).toContain("never tested");
+    expect(steps[0].instructions).toContain("assumes a current reading of 0");
+  });
+
+  it("does not add the untested-assumption caveat when the current reading was actually provided", () => {
+    const steps = stageDosing([
+      { compound: "X", quantityKg: 5000, forParameter: "K test", assumedZeroCurrent: false },
+    ]);
+    expect(steps[0].severity).toBe("action");
+    expect(steps[0].instructions).not.toContain("never tested");
+  });
+
   it("stages multiple doses independently, each getting its own two stages", () => {
     const steps = stageDosing([
       { compound: "KCl", quantityKg: 100, forParameter: "K test" },

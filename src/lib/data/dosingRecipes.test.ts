@@ -51,13 +51,17 @@ describe("DOSING_RECIPES", () => {
     expect(result[0].quantityKg).toBeCloseTo(3097.1, 0);
   });
 
-  it("uses the Ch.6 absolute floor (20 mg/L) for potassium in the 1-5 ppt band, not proportional scaling", () => {
+  it("uses the extended-interval target (50 mg/L) for potassium in the 1-5 ppt band, not proportional scaling", () => {
     // Nalgonda-style low-salinity source (Ch.6 Section 8 worked example).
+    // Target raised from the bare 20 mg/L "adequate" floor to 50 mg/L (Ch.6
+    // §2's own extended-interval figure, and the literal number the guide's
+    // cited real-world mortality case was corrected to) -- see the
+    // dosingRecipes.ts header comment for the full reasoning.
     const params: WaterParameters = { salinityPpt: 2, pH: 7.6, potassiumMgL: 8.4 };
     const recipe = DOSING_RECIPES.find((r) => r.id === "kcl-potassium-correction")!;
     const result = recipe.calculate(params, 10_000);
-    // target = 20 (Ch.6 floor), shortfall = 11.6, KCl = 23.2 mg/L, qty = 232 kg
-    expect(result[0].quantityKg).toBeCloseTo(232, 0);
+    // target = 50, shortfall = 41.6, KCl = 83.2 mg/L, qty = 832 kg
+    expect(result[0].quantityKg).toBeCloseTo(832, 0);
   });
 
   it("applies a disclosed conservative fallback for potassium in the undefined 5-<10 ppt gap band, rather than returning nothing", () => {
@@ -90,5 +94,21 @@ describe("DOSING_RECIPES", () => {
     // target = 1262 * (15/35) = 540.857, shortfall = 450.857, Epsom = 4554.1 mg/L, qty = 45541 kg
     expect(result[0].quantityKg).toBeGreaterThan(0);
     expect(result[0].compound).toBe("Magnesium sulfate heptahydrate (Epsom salt)");
+  });
+
+  it("uses the field-validated 28 mg/L floor directly for magnesium in the 5-<10 ppt gap band, NOT proportional scaling", () => {
+    // Found during field-testing, 2026-08-05: proportional scaling toward
+    // full-strength seawater's 1,262 mg/L reference produced a wildly
+    // disproportionate target (252 mg/L at 7 ppt -> tens of thousands of kg)
+    // for a parameter Ch.6 §1 already warns doesn't ratio-match reliably
+    // this low. Magnesium's gap-band fallback now ignores the proportional
+    // formula entirely and uses the floor.
+    const params: WaterParameters = { salinityPpt: 7, pH: 7.7, magnesiumMgL: 10 };
+    const recipe = DOSING_RECIPES.find((r) => r.id === "epsom-magnesium-correction")!;
+    const result = recipe.calculate(params, 10_000);
+    // target = 28 (floor only, not max(proportional=252.4, floor=28))
+    // shortfall = 18, Epsom = 18/0.099 = 181.8 mg/L, qty = 1818.2 kg
+    expect(result[0].quantityKg).toBeCloseTo(1818.2, 0);
+    expect(result[0].isGapBandFallback).toBe(true);
   });
 });

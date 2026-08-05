@@ -12,6 +12,15 @@ export const SPECIES: SpeciesProfile[] = [
     // routes >=30 ppt to Ch.10 (hypersaline). This is the guide's documented
     // operating envelope, not an independent literature claim.
     salinityToleranceRangePpt: [1, 30],
+    // 30 ppt is where this app's Ch.10 dilution-strategy routing kicks in,
+    // not a biological ceiling -- controlled trials found 100% survival at
+    // 35 ppt, 96.4% at 40 ppt, 95% at 45 ppt, 74.2% even at 50 ppt. Chapter
+    // 10 itself exists specifically to run vannamei successfully above this
+    // line. Found and fixed during field-testing, 2026-08-05: exceeding 30
+    // ppt was previously flagged identically to exceeding a real survival
+    // limit.
+    upperBoundIsOperatingScope:
+      "30 ppt is this guide's Ch.10 dilution-strategy routing boundary, not a survival ceiling -- real controlled trials show 95%+ survival at 45 ppt.",
     idealIonicRatios: {
       // Ch.3 Part 2: Na:Mg:Ca:K = 27:3:1:1 (calcium = 1 baseline)
       "Na:K": 27,

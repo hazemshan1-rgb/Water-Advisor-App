@@ -23,6 +23,16 @@ export interface WaterParameters {
   hydrogenSulfideMgL?: number;
   arsenicMgL?: number;
   ammoniumMgL?: number;
+  // Ch.7 §3-5 in-pond failure-mode parameters. Distinct from ammoniumMgL
+  // above, which is specifically Ch.2's native/geological baseline concept
+  // -- tanMgL is ongoing in-pond total ammonia nitrogen from feed/waste
+  // accumulation, a different failure mode with different severity language
+  // (Ch.7 §4 vs Ch.2 §3). Conflating the two fields would mean a genuinely
+  // dangerous in-pond ammonia reading gets the Ch.2 "baseline load, not a
+  // failure" framing -- see failureModeMatching.ts.
+  tanMgL?: number;
+  nitriteMgL?: number;
+  doMgL?: number;
 }
 
 // Mirrors the guide's own two-tier Watch/Action-Trigger language (Ch.2 §3),
@@ -83,6 +93,17 @@ export interface SpeciesProfile {
   category: "crustacean" | "fish" | "mollusc" | "algae" | "bacterial-consortium";
   trophicRole: TrophicRole;
   salinityToleranceRangePpt: [number, number];
+  // Set when the upper bound above is this app's own operating-scope/
+  // chapter-routing boundary rather than a documented biological survival
+  // ceiling (e.g. vannamei's 30 ppt is where Ch.10 dilution strategy takes
+  // over, not where the animal stops surviving -- real controlled trials
+  // show 95%+ survival at 45 ppt). When set, exceeding the upper bound is
+  // treated as "needs a different strategy" (action) rather than "likely
+  // lethal" (critical) -- see speciesCompatibility.ts. Lower-bound
+  // violations are always critical regardless of this field; osmotic
+  // failure at the low end doesn't have the same "just route elsewhere"
+  // escape hatch.
+  upperBoundIsOperatingScope?: string;
   idealIonicRatios: Partial<Record<"Na:K" | "Mg:Ca" | "Na:Ca", number>>;
   sensitivityThresholds: {
     tanMgL?: [number, number];
@@ -125,7 +146,7 @@ export interface DosingRecipe {
   calculate: (
     params: WaterParameters,
     volumeM3: number
-  ) => { compound: string; quantityKg: number; isGapBandFallback?: boolean }[];
+  ) => { compound: string; quantityKg: number; isGapBandFallback?: boolean; assumedZeroCurrent?: boolean }[];
 }
 
 // A single stage of a multi-stage correction protocol. Stage 1 delivers a

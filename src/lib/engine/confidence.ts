@@ -19,6 +19,9 @@ const KEY_OPTIONAL_FIELDS: (keyof WaterParameters)[] = [
   "hydrogenSulfideMgL",
   "arsenicMgL",
   "ammoniumMgL",
+  "doMgL",
+  "tanMgL",
+  "nitriteMgL",
 ];
 
 const FIELD_LABELS: Partial<Record<keyof WaterParameters, string>> = {
@@ -34,6 +37,9 @@ const FIELD_LABELS: Partial<Record<keyof WaterParameters, string>> = {
   hydrogenSulfideMgL: "hydrogen sulfide",
   arsenicMgL: "arsenic",
   ammoniumMgL: "ammonium",
+  doMgL: "dissolved oxygen",
+  tanMgL: "total ammonia nitrogen (in-pond)",
+  nitriteMgL: "nitrite",
 };
 
 const FIELD_STAKES: Partial<Record<keyof WaterParameters, string>> = {
@@ -49,6 +55,9 @@ const FIELD_STAKES: Partial<Record<keyof WaterParameters, string>> = {
   hydrogenSulfideMgL: "could hide a toxic-at-trace-levels risk the guide treats as blocking (Ch.2 §4)",
   arsenicMgL: "could hide a regulatory/long-term health risk in known-risk geology (Ch.2 §1 row 19)",
   ammoniumMgL: "could hide a native geological ammonium load that needs different handling than a pond-management failure",
+  doMgL: "could hide a dawn crash risk — DO below 2 mg/L can cause mass mortality within 1-2 hours (Ch.7 §3)",
+  tanMgL: "could hide an in-pond ammonia toxicity risk distinct from source-water ammonium (Ch.7 §4)",
+  nitriteMgL: "could hide an immune-suppression or lethal nitrite risk, especially if chloride/salinity is also low (Ch.7 §5)",
 };
 
 export interface ConfidenceResult {

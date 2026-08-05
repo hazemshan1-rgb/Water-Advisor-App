@@ -18,6 +18,7 @@ interface RawDose {
   quantityKg: number;
   forParameter: string;
   isGapBandFallback?: boolean;
+  assumedZeroCurrent?: boolean;
 }
 
 function roundKg(kg: number): number {
@@ -34,6 +35,14 @@ export function stageDosing(doses: RawDose[]): DosingStep[] {
     const gapNote = d.isGapBandFallback
       ? " Source salinity falls in the 5-10 ppt band the guide's own decision tree doesn't resolve — this target is a conservative fallback (whichever chapter's rule asks for more), not a direct citation."
       : "";
+    // Found during field-testing, 2026-08-05: a real IMTA case with
+    // potassium untested produced a large, confident-looking dose built on
+    // a silent current=0 assumption, sitting next to a generic (easy to
+    // skim past) "not provided" note elsewhere in the report. This puts the
+    // caveat directly on the number itself.
+    const untestedNote = d.assumedZeroCurrent
+      ? ` ${parameterLabel} was never tested — this quantity assumes a current reading of 0 mg/L, which is very likely wrong. Test before dosing anything close to this amount.`
+      : "";
 
     const stage1Kg = roundKg(d.quantityKg * STAGE_1_FRACTION);
     const stage2Kg = roundKg(d.quantityKg - stage1Kg);
@@ -43,8 +52,8 @@ export function stageDosing(doses: RawDose[]): DosingStep[] {
       compound: d.compound,
       quantityKg: stage1Kg,
       forParameter: d.forParameter,
-      severity: "action",
-      instructions: `Apply now — roughly ${Math.round(STAGE_1_FRACTION * 100)}% of the total ${roundKg(d.quantityKg)} kg correction. Do not apply the full amount in one dose.${gapNote}`,
+      severity: d.assumedZeroCurrent ? "critical" : "action",
+      instructions: `Apply now — roughly ${Math.round(STAGE_1_FRACTION * 100)}% of the total ${roundKg(d.quantityKg)} kg correction. Do not apply the full amount in one dose.${gapNote}${untestedNote}`,
     });
     steps.push({
       stage: 2,

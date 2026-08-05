@@ -19,7 +19,10 @@ const FIELDS: { key: keyof WaterParameters; label: string; required?: boolean }[
   { key: "manganeseMgL", label: "Manganese (mg/L)" },
   { key: "hydrogenSulfideMgL", label: "Hydrogen sulfide (mg/L)" },
   { key: "arsenicMgL", label: "Arsenic (mg/L)" },
-  { key: "ammoniumMgL", label: "Ammonium (mg/L)" },
+  { key: "ammoniumMgL", label: "Ammonium — source water baseline (mg/L)" },
+  { key: "tanMgL", label: "Total ammonia nitrogen — in-pond (mg/L)" },
+  { key: "nitriteMgL", label: "Nitrite (mg/L)" },
+  { key: "doMgL", label: "Dissolved oxygen — dawn reading (mg/L)" },
 ];
 
 export function ParameterForm({

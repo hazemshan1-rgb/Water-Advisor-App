@@ -31,6 +31,21 @@ describe("checkImtaCompatibility", () => {
     expect(notes.some((n) => n.includes("compatible"))).toBe(true);
   });
 
+  it("includes knownConflicts caveat text even for a pair marked compatible -- bug found during field-testing, 2026-08-05", () => {
+    // checkImtaCompatibility used to drop knownConflicts entirely whenever
+    // compatible:true, silently discarding the O. niloticus vs O.
+    // mossambicus caveat for exactly the two pairs where it matters most.
+    const tilapiaMussel = checkImtaCompatibility(["tilapia", "green-mussel"]).find((n) =>
+      n.startsWith("tilapia + green-mussel")
+    );
+    expect(tilapiaMussel).toContain("O. mossambicus");
+
+    const tilapiaGracilaria = checkImtaCompatibility(["tilapia", "gracilaria"]).find((n) =>
+      n.startsWith("tilapia + gracilaria")
+    );
+    expect(tilapiaGracilaria).toContain("O. mossambicus");
+  });
+
   it("reports the full 5-species IMTA set without any pair silently dropped", () => {
     const notes = checkImtaCompatibility([
       "vannamei",

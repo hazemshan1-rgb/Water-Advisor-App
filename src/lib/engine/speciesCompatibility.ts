@@ -15,11 +15,28 @@ export function checkSpeciesCompatibility(
 
     const deviations: Anomaly[] = [];
     const [minPpt, maxPpt] = species.salinityToleranceRangePpt;
-    if (params.salinityPpt < minPpt || params.salinityPpt > maxPpt) {
+    const belowRange = params.salinityPpt < minPpt;
+    const aboveRange = params.salinityPpt > maxPpt;
+    if (belowRange) {
+      // Low-end violations get no downgrade: osmotic failure at the low
+      // end doesn't have a "just route elsewhere" escape hatch the way a
+      // high-salinity source does (dilution).
       deviations.push({
-        message: `salinity ${params.salinityPpt} ppt is outside ${species.commonName}'s tolerance range of ${minPpt}-${maxPpt} ppt.`,
+        message: `salinity ${params.salinityPpt} ppt is below ${species.commonName}'s tolerance range of ${minPpt}-${maxPpt} ppt.`,
         severity: "critical",
       });
+    } else if (aboveRange) {
+      if (species.upperBoundIsOperatingScope) {
+        deviations.push({
+          message: `salinity ${params.salinityPpt} ppt is above ${species.commonName}'s ${maxPpt} ppt operating-scope boundary — this needs a different handling strategy, not necessarily a survival risk. ${species.upperBoundIsOperatingScope}`,
+          severity: "action",
+        });
+      } else {
+        deviations.push({
+          message: `salinity ${params.salinityPpt} ppt is above ${species.commonName}'s tolerance range of ${minPpt}-${maxPpt} ppt.`,
+          severity: "critical",
+        });
+      }
     }
 
     const targetNaK = species.idealIonicRatios["Na:K"];
@@ -41,9 +58,13 @@ export function checkSpeciesCompatibility(
       }
     }
 
-    // Salinity outside tolerance range is always high risk regardless of other deviations.
-    const outOfTolerance = params.salinityPpt < minPpt || params.salinityPpt > maxPpt;
-    const riskLevel: "low" | "moderate" | "high" = outOfTolerance
+    // A critical-severity deviation (below range, or above range with no
+    // operating-scope escape hatch) is always high risk regardless of other
+    // deviations. An above-range operating-scope deviation is real but not
+    // automatically the worst case -- it falls through to the normal
+    // deviation-count scoring below.
+    const hasCriticalDeviation = deviations.some((d) => d.severity === "critical");
+    const riskLevel: "low" | "moderate" | "high" = hasCriticalDeviation
       ? "high"
       : deviations.length === 0
         ? "low"

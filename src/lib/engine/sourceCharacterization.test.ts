@@ -176,6 +176,29 @@ describe("checkSourceRedFlags", () => {
     const flags = checkSourceRedFlags({ salinityPpt: 15, pH: 7.8 });
     expect(flags).toEqual([]);
   });
+
+  it("flags dissolved oxygen below the 3 mg/L watch line (Ch.7 §3)", () => {
+    const flags = checkSourceRedFlags({ salinityPpt: 15, pH: 7.8, doMgL: 2.5 });
+    const flag = flags.find((f) => f.message.includes("Dissolved oxygen"));
+    expect(flag?.severity).toBe("watch");
+  });
+
+  it("does not flag dissolved oxygen at a comfortable reading", () => {
+    const flags = checkSourceRedFlags({ salinityPpt: 15, pH: 7.8, doMgL: 6 });
+    expect(flags.some((f) => f.message.includes("Dissolved oxygen"))).toBe(false);
+  });
+
+  it("flags total ammonia nitrogen above the 2 mg/L watch line (Ch.7 §4)", () => {
+    const flags = checkSourceRedFlags({ salinityPpt: 15, pH: 7.8, tanMgL: 3 });
+    const flag = flags.find((f) => f.message.includes("Total ammonia nitrogen"));
+    expect(flag?.severity).toBe("watch");
+  });
+
+  it("flags nitrite above the 0.6 mg/L standing target (Ch.6 §3, Ch.7 §5)", () => {
+    const flags = checkSourceRedFlags({ salinityPpt: 2, pH: 7.6, nitriteMgL: 0.8 });
+    const flag = flags.find((f) => f.message.includes("Nitrite"));
+    expect(flag?.severity).toBe("watch");
+  });
 });
 
 describe("characterizeSource", () => {

@@ -17,6 +17,9 @@ const FULL_PARAMS: WaterParameters = {
   hydrogenSulfideMgL: 0,
   arsenicMgL: 0,
   ammoniumMgL: 0.1,
+  doMgL: 6,
+  tanMgL: 0.5,
+  nitriteMgL: 0.1,
 };
 
 describe("computeConfidence", () => {

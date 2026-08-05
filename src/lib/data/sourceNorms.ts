@@ -83,4 +83,11 @@ export const RED_FLAG_THRESHOLDS = {
   arsenicWatchMgL: 0.01,
   ammoniumWatchMgL: 0.5,
   ammoniumActionMgL: 1,
+  // Ch.7 §3/§4/§5 in-pond failure-mode watch tiers -- the corresponding
+  // critical-tier checks live in failureModes.ts / failureModeMatching.ts.
+  // Kept here rather than duplicating a second thresholds file, though
+  // their source is Ch.7, not Ch.2 like the rest of this table.
+  doWatchMgL: 3, // below this, growth is limited even without a crash (Ch.7 §3)
+  tanWatchMgL: 2, // below the 5 mg/L failure-mode threshold but real margin is thin
+  nitriteWatchMgL: 0.6, // Ch.6 §3's own stated standing target lower bound
 } as const;

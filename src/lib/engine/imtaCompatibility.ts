@@ -25,9 +25,14 @@ export function checkImtaCompatibility(speciesIds: string[]): string[] {
       if (!rule.compatible) {
         notes.push(`${a} + ${b}: NOT compatible. ${rule.knownConflicts ?? ""}`.trim());
       } else {
-        notes.push(
-          `${a} + ${b}: compatible. ${rule.stockingRatioGuidance ?? ""}`.trim()
-        );
+        // "Compatible" and "has a documented caveat" are not mutually
+        // exclusive -- a pair can be real-world compatible AND carry a
+        // known conflict/caveat (e.g. tilapia+green-mussel: works, but only
+        // under a different species than the one profiled). Dropping
+        // knownConflicts here silently discarded exactly that kind of
+        // caveat -- found during field-testing, 2026-08-05.
+        const guidance = [rule.stockingRatioGuidance, rule.knownConflicts].filter(Boolean).join(" ");
+        notes.push(`${a} + ${b}: compatible. ${guidance}`.trim());
       }
     }
   }

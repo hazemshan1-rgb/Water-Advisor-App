@@ -25,6 +25,7 @@ export function runDiagnosis(analysis: Analysis): DiagnosisResult {
       quantityKg: dose.quantityKg,
       forParameter: recipe.targetRatio,
       isGapBandFallback: dose.isGapBandFallback,
+      assumedZeroCurrent: dose.assumedZeroCurrent,
     }))
   ).filter((d) => d.quantityKg > 0);
 
