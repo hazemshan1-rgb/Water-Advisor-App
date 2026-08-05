@@ -80,6 +80,14 @@ export interface Analysis {
   // (see engine/saltBuilder.ts) alongside the usual correction dosingPlan.
   targetSalinityPpt?: number;
   systemType?: SystemType;
+  // Postlarval age at stocking/transfer, in days since metamorphosis to PL
+  // stage. Distinct from pond age -- this is about the animal, not the
+  // water. Real direct-transfer survival data shows this matters enormously
+  // at low salinity: 19.8% vs 83.8% survival at 8 ppt between PL-8 and
+  // PL-22 (see species.ts's directTransferSalinityShock and
+  // speciesCompatibility.ts). Optional and currently only checked against
+  // for species with that data field populated (vannamei).
+  postlarvalAgeDays?: number;
   diagnosisSnapshot?: DiagnosisResult;
   notes?: string;
 }
@@ -112,6 +120,15 @@ export interface SpeciesProfile {
   };
   lifeStageNotes?: string;
   sourceCitation: string;
+  // Real 24-hour DIRECT-TRANSFER (no gradual acclimation) survival data at
+  // documented postlarval ages -- a genuinely different, much sharper risk
+  // than the general chronic salinityToleranceRangePpt above. Only
+  // populated where a real primary source exists (currently vannamei only,
+  // Ogle et al. 1992). See speciesCompatibility.ts for how this is used.
+  directTransferSalinityShock?: {
+    citation: string;
+    dataPoints: { postlarvalAgeDays: number; salinityPpt: number; survivalPercent: number }[];
+  };
 }
 
 export interface ImtaCompatibilityRule {

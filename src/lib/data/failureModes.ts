@@ -36,9 +36,9 @@ export const FAILURE_MODES: FailureMode[] = [
     id: "ammonia-toxicity",
     symptomPattern:
       "Reduced appetite, lethargy, gill damage visible on close inspection, slowed growth, and in severe cases direct mortality.",
-    relatedParameters: ["tanMgL"],
+    relatedParameters: ["tanMgL", "pH", "temperatureC"],
     diagnosis:
-      "Total ammonia nitrogen (TAN) exists as a relatively harmless ionized form (NH4+) and a genuinely toxic un-ionized form (NH3); higher pH and temperature both push more of the total into the toxic form. This match uses a flat, salinity-independent TAN threshold rather than the full pH/temperature-adjusted un-ionized fraction (a real, more precise model exists in the literature but wasn't verified carefully enough to ship this pass) -- treat this as a conservative screen, not the guide's full picture.",
+      "Total ammonia nitrogen (TAN) exists as a relatively harmless ionized form (NH4+) and a genuinely toxic un-ionized form (NH3); higher pH and temperature both push more of the total into the toxic form. When pH and temperature are both available, this match calculates the actual un-ionized fraction (Emerson et al. 1975) and compares it against the documented LC50 floor -- otherwise it falls back to a flat, salinity-independent TAN screen, which is more conservative in some conditions and less conservative in others depending on where the actual pH/temperature sit.",
     correctiveSteps: [
       "Reduce feed load if TAN is trending up — overfeeding is the most common root cause (Ch.7 §4).",
       "Address pH swings, not just the ammonia number — high pH converts the same ammonia load into more toxic un-ionized ammonia.",
@@ -90,13 +90,21 @@ export const POTASSIUM_MOLT_FAILURE_THRESHOLD_MGL = 10;
 // mass mortality can follow within 1-2 hours.
 export const DO_CRASH_THRESHOLD_MGL = 2;
 
-// Flat, salinity-independent TAN threshold -- see failure-mode diagnosis
-// comment above for why this is a conservative screen, not the guide's full
-// pH/temperature-adjusted un-ionized-ammonia picture. 5.24 mg/L ammonia-N is
-// the lowest concentration directly documented (via primary research) to
-// cause significant mortality and measurable immune (phenoloxidase)
-// suppression by day 7.
+// Flat, salinity-independent TAN threshold -- used only when pH and/or
+// temperature aren't both available to run the precise un-ionized
+// calculation in ammoniaChemistry.ts. 5.24 mg/L ammonia-N is the lowest
+// concentration directly documented (via primary research) to cause
+// significant mortality and measurable immune (phenoloxidase) suppression
+// by day 7.
 export const TAN_TOXICITY_THRESHOLD_MGL = 5;
+
+// Ch.7 S4: documented LC50 range for un-ionized ammonia (NH3) is
+// 0.69-2.95 mg/L; ~0.45 mg/L un-ionized cuts growth by roughly half even
+// below the lethal range. Used when pH+temperature let the engine compute
+// the actual un-ionized fraction instead of falling back to the flat TAN
+// screen above.
+export const UNIONIZED_AMMONIA_LC50_LOW_MGL = 0.69;
+export const UNIONIZED_AMMONIA_GROWTH_IMPAIRMENT_MGL = 0.45;
 
 // Ch.7 §5: nitrite at 5 mg/L and above suppresses immune function
 // (reduced hemocyte counts and phenoloxidase activity), independent of the

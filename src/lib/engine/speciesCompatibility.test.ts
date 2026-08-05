@@ -57,4 +57,59 @@ describe("checkSpeciesCompatibility", () => {
     const deviation = result.vannamei.deviations.find((d) => d.message.includes("salinity"));
     expect(deviation?.severity).toBe("critical");
   });
+
+  describe("postlarval direct-transfer shock (Ogle et al. 1992)", () => {
+    it("does nothing when postlarvalAgeDays isn't provided, even at a risky salinity", () => {
+      const params: WaterParameters = { salinityPpt: 4, pH: 7.8 };
+      const result = checkSpeciesCompatibility(params, ["vannamei"]);
+      expect(result.vannamei.deviations.some((d) => d.message.includes("postlarva"))).toBe(false);
+    });
+
+    it("flags critical risk for an 8-day-old postlarva direct-transferred to 8 ppt", () => {
+      const params: WaterParameters = { salinityPpt: 8, pH: 7.8 };
+      const result = checkSpeciesCompatibility(params, ["vannamei"], 8);
+      const dev = result.vannamei.deviations.find((d) => d.message.includes("19.8%"));
+      expect(dev?.severity).toBe("critical");
+      expect(result.vannamei.riskLevel).toBe("high");
+    });
+
+    it("flags only a watch-level caution for an 8-day-old postlarva at 16 ppt, where documented survival is still 92.8%", () => {
+      const params: WaterParameters = { salinityPpt: 16, pH: 7.8 };
+      const result = checkSpeciesCompatibility(params, ["vannamei"], 8);
+      const dev = result.vannamei.deviations.find((d) => d.message.includes("92.8%"));
+      expect(dev?.severity).toBe("watch");
+    });
+
+    it("does not flag an 8-day-old postlarva at a comfortably high salinity (32 ppt)", () => {
+      const params: WaterParameters = { salinityPpt: 32, pH: 7.8 };
+      const result = checkSpeciesCompatibility(params, ["vannamei"], 8);
+      expect(result.vannamei.deviations.some((d) => d.message.includes("postlarva"))).toBe(false);
+    });
+
+    it("flags a documented-gap watch note for an age between PL-8 and PL-22 at a risky salinity, without assuming PL-22-level tolerance", () => {
+      const params: WaterParameters = { salinityPpt: 6, pH: 7.8 };
+      const result = checkSpeciesCompatibility(params, ["vannamei"], 15);
+      const dev = result.vannamei.deviations.find((d) => d.message.includes("No direct survival data"));
+      expect(dev?.severity).toBe("watch");
+    });
+
+    it("still flags a real, lower-severity risk for a 22-day-old postlarva at 2 ppt, not a silent pass", () => {
+      const params: WaterParameters = { salinityPpt: 2, pH: 7.8 };
+      const result = checkSpeciesCompatibility(params, ["vannamei"], 25);
+      const dev = result.vannamei.deviations.find((d) => d.message.includes("40.2%"));
+      expect(dev?.severity).toBe("action");
+    });
+
+    it("does not flag a 22-day-old postlarva at 16 ppt, where documented survival is 97.8%", () => {
+      const params: WaterParameters = { salinityPpt: 16, pH: 7.8 };
+      const result = checkSpeciesCompatibility(params, ["vannamei"], 30);
+      expect(result.vannamei.deviations.some((d) => d.message.includes("postlarva") || d.message.includes("Documented direct-transfer"))).toBe(false);
+    });
+
+    it("does not affect species with no directTransferSalinityShock data (e.g. tilapia)", () => {
+      const params: WaterParameters = { salinityPpt: 8, pH: 7.8 };
+      const result = checkSpeciesCompatibility(params, ["tilapia"], 8);
+      expect(result.tilapia.deviations).toEqual([]);
+    });
+  });
 });

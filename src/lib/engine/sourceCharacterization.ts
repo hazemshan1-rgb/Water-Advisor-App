@@ -1,6 +1,8 @@
 // src/lib/engine/sourceCharacterization.ts
 import type { Anomaly, WaterParameters } from "../types";
 import { classifySourceBySalinity, RED_FLAG_THRESHOLDS } from "../data/sourceNorms";
+import { UNIONIZED_AMMONIA_GROWTH_IMPAIRMENT_MGL, TAN_TOXICITY_THRESHOLD_MGL } from "../data/failureModes";
+import { calculateUnionizedAmmoniaMgL } from "./ammoniaChemistry";
 
 export { classifySourceBySalinity };
 
@@ -150,6 +152,22 @@ function checkNonContaminantRedFlags(params: WaterParameters): Anomaly[] {
         severity: "info",
       });
     }
+
+    // Field-confusion guard: ammoniumMgL is meant to be a source-water
+    // BASELINE reading, typically low and geological in origin. A value
+    // this high is far more consistent with someone entering an in-pond
+    // post-stocking ammonia test in the wrong field -- the "Total ammonia
+    // nitrogen -- in-pond" field is a separate, deliberately distinct
+    // parameter (see ParameterForm.tsx labels and the failureModeMatching
+    // test documenting they are NOT aliases). Fires independently of the
+    // tiers above so it still surfaces even when the raw value already
+    // triggered the "action" branch.
+    if (params.ammoniumMgL >= TAN_TOXICITY_THRESHOLD_MGL && params.tanMgL === undefined) {
+      flags.push({
+        message: `${params.ammoniumMgL} mg/L is unusually high for a source-water ammonium baseline — if this reading was actually taken in-pond after stocking, it belongs in "Total ammonia nitrogen — in-pond", not here. Entered as source ammonium, it will NOT trigger the ammonia-toxicity failure-mode check.`,
+        severity: "watch",
+      });
+    }
   }
 
   // Ch.7 §3/§4/§5 in-pond failure-mode watch tiers. The corresponding
@@ -163,11 +181,23 @@ function checkNonContaminantRedFlags(params: WaterParameters): Anomaly[] {
     });
   }
 
-  if (params.tanMgL !== undefined && params.tanMgL > t.tanWatchMgL) {
-    flags.push({
-      message: `Total ammonia nitrogen at ${params.tanMgL} mg/L is above the ${t.tanWatchMgL} mg/L watch line — test alongside pH and temperature, both change how toxic this reading actually is (Ch.7 §4).`,
-      severity: "watch",
-    });
+  if (params.tanMgL !== undefined) {
+    const unionizedMgL =
+      params.pH !== undefined && params.temperatureC !== undefined
+        ? calculateUnionizedAmmoniaMgL(params.tanMgL, params.pH, params.temperatureC)
+        : undefined;
+
+    if (unionizedMgL !== undefined && unionizedMgL >= UNIONIZED_AMMONIA_GROWTH_IMPAIRMENT_MGL) {
+      flags.push({
+        message: `Un-ionized ammonia (NH3) works out to roughly ${unionizedMgL.toFixed(2)} mg/L from ${params.tanMgL} mg/L TAN at pH ${params.pH}/${params.temperatureC}C — above the ${UNIONIZED_AMMONIA_GROWTH_IMPAIRMENT_MGL} mg/L level documented to cut growth by roughly half, even before the lethal range (Ch.7 §4, Emerson et al. 1975 equilibrium).`,
+        severity: "watch",
+      });
+    } else if (unionizedMgL === undefined && params.tanMgL > t.tanWatchMgL) {
+      flags.push({
+        message: `Total ammonia nitrogen at ${params.tanMgL} mg/L is above the ${t.tanWatchMgL} mg/L watch line — test alongside pH and temperature, both change how toxic this reading actually is (Ch.7 §4).`,
+        severity: "watch",
+      });
+    }
   }
 
   if (params.nitriteMgL !== undefined && params.nitriteMgL > t.nitriteWatchMgL) {

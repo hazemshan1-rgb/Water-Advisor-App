@@ -19,6 +19,7 @@ function NewAnalysisContent() {
   const [volumeM3, setVolumeM3] = useState<number | undefined>(undefined);
   const [targetSalinityPpt, setTargetSalinityPpt] = useState<number | undefined>(undefined);
   const [systemType, setSystemType] = useState<SystemType>("open-pond");
+  const [postlarvalAgeDays, setPostlarvalAgeDays] = useState<number | undefined>(undefined);
 
   async function handleRun() {
     if (parameters.salinityPpt === undefined || parameters.pH === undefined) {
@@ -35,6 +36,7 @@ function NewAnalysisContent() {
       volumeM3,
       targetSalinityPpt,
       systemType,
+      postlarvalAgeDays,
     };
     const diagnosisSnapshot = runDiagnosis(analysis);
     await saveAnalysis({ ...analysis, diagnosisSnapshot });
@@ -48,6 +50,21 @@ function NewAnalysisContent() {
       <ParameterForm value={parameters} onChange={setParameters} />
 
       <SpeciesPicker selected={speciesIds} onChange={setSpeciesIds} />
+
+      <label className="text-sm block">
+        Postlarval age at stocking/transfer (days, optional)
+        <input
+          type="number"
+          className="border rounded px-2 py-1 w-full mt-1"
+          value={postlarvalAgeDays ?? ""}
+          onChange={(e) =>
+            setPostlarvalAgeDays(e.target.value === "" ? undefined : Number(e.target.value))
+          }
+        />
+        <span className="text-xs text-slate-500 block mt-1">
+          Only affects vannamei so far — direct-transfer survival varies enormously by PL age at low salinity (documented ~30x difference between PL-8 and PL-22).
+        </span>
+      </label>
 
       <label className="text-sm block">
         Pond/tank volume (m³)

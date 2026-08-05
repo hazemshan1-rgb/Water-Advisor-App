@@ -88,6 +88,15 @@ export function computeConfidence(params: WaterParameters): ConfidenceResult {
     );
   }
 
+  // Reconsidered 2026-08-05 after KEY_OPTIONAL_FIELDS grew 12->15 (added
+  // doMgL/tanMgL/nitriteMgL): kept the same absolute cutoffs rather than
+  // rescaling proportionally. These are tied to specific field STAKES
+  // (FIELD_STAKES above), not a pure percentage score, so "missing 3"
+  // means the same thing regardless of the total -- e.g. providing every
+  // classic Ch.2 field but skipping all 3 pond-management readings (DO/
+  // TAN/nitrite) is exactly 3 missing, and genuinely deserves "medium":
+  // that's a complete source-water screen but zero in-pond health data,
+  // a real gap worth flagging, not an artifact of the field count change.
   let completenessCap: Confidence = "high";
   if (missing.length >= 6) {
     completenessCap = "low";

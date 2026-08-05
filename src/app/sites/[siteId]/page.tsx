@@ -1,10 +1,11 @@
 // src/app/sites/[siteId]/page.tsx
 "use client";
 
-import { use } from "react";
+import { use, useMemo } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
+import { detectTrends } from "@/lib/engine/trendAnalysis";
 
 export default function SiteDetailPage({ params }: { params: Promise<{ siteId: string }> }) {
   const { siteId } = use(params);
@@ -13,6 +14,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId: s
     () => db.analyses.where("siteId").equals(siteId).reverse().sortBy("date"),
     [siteId]
   );
+  const trends = useMemo(() => detectTrends(analyses ?? []), [analyses]);
 
   if (!site) return <main className="p-6">Loading...</main>;
 
@@ -26,6 +28,23 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId: s
       >
         New analysis
       </Link>
+
+      {trends.length > 0 && (
+        <div className="border border-amber-300 bg-amber-50 rounded p-3 space-y-2">
+          <h2 className="text-sm font-semibold text-amber-900">Trend alerts</h2>
+          <p className="text-xs text-amber-800">
+            Based on the last 3 readings across this site&apos;s analysis history — a worsening trajectory even before any single reading crosses its acute threshold. Not a guide citation; a disclosed early-warning heuristic (see trendAnalysis.ts).
+          </p>
+          <ul className="space-y-1">
+            {trends.map((t, i) => (
+              <li key={i} className="text-sm text-amber-900">
+                {t.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <ul className="divide-y">
         {(analyses ?? []).map((a) => (
           <li key={a.id} className="py-3">

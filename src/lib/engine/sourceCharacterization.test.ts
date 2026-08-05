@@ -154,6 +154,21 @@ describe("checkSourceRedFlags", () => {
     expect(flag?.severity).toBe("watch");
   });
 
+  it("flags a field-confusion warning when ammoniumMgL is entered at a level real TAN research would treat as dangerous, with tanMgL left blank", () => {
+    const params: WaterParameters = { salinityPpt: 15, pH: 7.8, ammoniumMgL: 19 };
+    const flags = checkSourceRedFlags(params);
+    const confusionFlag = flags.find((f) => f.message.includes("in-pond"));
+    expect(confusionFlag).toBeDefined();
+    expect(confusionFlag?.severity).toBe("watch");
+  });
+
+  it("does NOT fire the field-confusion warning once tanMgL is also provided -- the two fields are being used correctly, not confused", () => {
+    const params: WaterParameters = { salinityPpt: 15, pH: 7.8, ammoniumMgL: 19, tanMgL: 0.5 };
+    const flags = checkSourceRedFlags(params);
+    const confusionFlag = flags.find((f) => f.message.includes("belongs in"));
+    expect(confusionFlag).toBeUndefined();
+  });
+
   it("flags a real contradiction: high salinity with critically low chloride", () => {
     // Physically inconsistent for a natural source, but the app should
     // still report the chloride check exactly as configured rather than

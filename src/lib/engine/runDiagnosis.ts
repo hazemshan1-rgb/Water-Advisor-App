@@ -12,10 +12,10 @@ const DOSING_PROTOCOL_NOTE =
   "Doses below are split into two stages rather than applied all at once. Stage 1 delivers roughly half the total correction; stage 2 (the remainder) should only be applied after retesting confirms stage 1 moved the reading toward target without overshooting. The stage split itself is a conservative engineering safety practice, not a number cited from the guide — no published safe correction-rate figure was found for shrimp pond mineral dosing (see the app's stress-test log).";
 
 export function runDiagnosis(analysis: Analysis): DiagnosisResult {
-  const { parameters, targetSpeciesIds, volumeM3, targetSalinityPpt, systemType } = analysis;
+  const { parameters, targetSpeciesIds, volumeM3, targetSalinityPpt, systemType, postlarvalAgeDays } = analysis;
 
   const sourceAnomalies = characterizeSource(parameters);
-  const perSpecies = checkSpeciesCompatibility(parameters, targetSpeciesIds);
+  const perSpecies = checkSpeciesCompatibility(parameters, targetSpeciesIds, postlarvalAgeDays);
   const imtaNotes = checkImtaCompatibility(targetSpeciesIds);
   const matchedFailureModes = matchFailureModes(parameters);
 
