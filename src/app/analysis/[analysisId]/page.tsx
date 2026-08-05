@@ -5,6 +5,7 @@ import { use } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { DiagnosisReportView } from "@/components/DiagnosisReportView";
+import { ChatPanel } from "@/components/ChatPanel";
 
 export default function AnalysisReportPage({ params }: { params: Promise<{ analysisId: string }> }) {
   const { analysisId } = use(params);
@@ -17,6 +18,7 @@ export default function AnalysisReportPage({ params }: { params: Promise<{ analy
     <main className="max-w-2xl mx-auto p-6 space-y-4">
       <h1 className="text-2xl font-semibold">Diagnosis Report — {analysis.date}</h1>
       <DiagnosisReportView diagnosis={analysis.diagnosisSnapshot} />
+      <ChatPanel analysis={analysis} diagnosis={analysis.diagnosisSnapshot} />
     </main>
   );
 }
