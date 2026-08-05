@@ -14,6 +14,7 @@ export function ChatPanel({ analysis, diagnosis }: { analysis: Analysis; diagnos
   const [loading, setLoading] = useState(false);
 
   async function handleSend() {
+    if (loading) return;
     if (!input.trim()) return;
     const userMessage = input.trim();
     setMessages((prev) => [...prev, { role: "user", text: userMessage }]);
