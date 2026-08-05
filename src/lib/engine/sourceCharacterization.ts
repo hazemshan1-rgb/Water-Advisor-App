@@ -31,6 +31,18 @@ export function checkSourceRedFlags(params: WaterParameters): string[] {
     }
   }
 
+  if (params.magnesiumMgL !== undefined) {
+    if (params.salinityPpt >= 10 && params.magnesiumMgL < t.magnesiumFloorAtStandardSalinityMgL) {
+      flags.push(
+        `magnesium at ${params.magnesiumMgL} mg/L is below the ${t.magnesiumFloorAtStandardSalinityMgL} mg/L floor for the >=10 ppt target band (Ch.2 §3) — route to Ch.6 absolute-threshold table, not ratio dilution alone.`
+      );
+    } else if (params.salinityPpt >= 1 && params.salinityPpt < 5 && params.magnesiumMgL < t.magnesiumFloorAtLowSalinityMgL) {
+      flags.push(
+        `magnesium at ${params.magnesiumMgL} mg/L is below the ${t.magnesiumFloorAtLowSalinityMgL} mg/L floor for the 1-5 ppt target band (Ch.2 §3).`
+      );
+    }
+  }
+
   if (params.chlorideMgL !== undefined && params.salinityPpt < 5) {
     if (params.chlorideMgL < t.chlorideActionMgLAtLowSalinity) {
       flags.push(

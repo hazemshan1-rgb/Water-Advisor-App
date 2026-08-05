@@ -63,6 +63,18 @@ describe("checkSourceRedFlags", () => {
     const flags = checkSourceRedFlags(params);
     expect(flags.some((f) => f.includes("chloride"))).toBe(false);
   });
+
+  it("flags magnesium below the 3 mg/L floor at low salinity (1-5 ppt)", () => {
+    const params: WaterParameters = { salinityPpt: 2, pH: 7.5, magnesiumMgL: 2 };
+    const flags = checkSourceRedFlags(params);
+    expect(flags.some((f) => f.includes("magnesium"))).toBe(true);
+  });
+
+  it("does not flag magnesium when adequate at low salinity", () => {
+    const params: WaterParameters = { salinityPpt: 2, pH: 7.5, magnesiumMgL: 20 };
+    const flags = checkSourceRedFlags(params);
+    expect(flags.some((f) => f.includes("magnesium"))).toBe(false);
+  });
 });
 
 describe("characterizeSource", () => {
