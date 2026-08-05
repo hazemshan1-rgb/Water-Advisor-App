@@ -7,7 +7,7 @@ import { ParameterForm } from "@/components/ParameterForm";
 import { SpeciesPicker } from "@/components/SpeciesPicker";
 import { saveAnalysis } from "@/lib/db";
 import { runDiagnosis } from "@/lib/engine/runDiagnosis";
-import type { WaterParameters } from "@/lib/types";
+import type { SystemType, WaterParameters } from "@/lib/types";
 
 function NewAnalysisContent() {
   const searchParams = useSearchParams();
@@ -17,6 +17,8 @@ function NewAnalysisContent() {
   const [parameters, setParameters] = useState<Partial<WaterParameters>>({});
   const [speciesIds, setSpeciesIds] = useState<string[]>([]);
   const [volumeM3, setVolumeM3] = useState<number | undefined>(undefined);
+  const [targetSalinityPpt, setTargetSalinityPpt] = useState<number | undefined>(undefined);
+  const [systemType, setSystemType] = useState<SystemType>("open-pond");
 
   async function handleRun() {
     if (parameters.salinityPpt === undefined || parameters.pH === undefined) {
@@ -31,6 +33,8 @@ function NewAnalysisContent() {
       parameters: parameters as WaterParameters,
       targetSpeciesIds: speciesIds,
       volumeM3,
+      targetSalinityPpt,
+      systemType,
     };
     const diagnosisSnapshot = runDiagnosis(analysis);
     await saveAnalysis({ ...analysis, diagnosisSnapshot });
@@ -54,6 +58,33 @@ function NewAnalysisContent() {
           onChange={(e) => setVolumeM3(e.target.value === "" ? undefined : Number(e.target.value))}
         />
       </label>
+
+      <fieldset className="border rounded p-3 space-y-3">
+        <legend className="text-sm font-medium px-1">Building salinity? (optional)</legend>
+        <label className="text-sm block">
+          Target salinity (ppt)
+          <input
+            type="number"
+            step="any"
+            className="border rounded px-2 py-1 w-full mt-1"
+            value={targetSalinityPpt ?? ""}
+            onChange={(e) =>
+              setTargetSalinityPpt(e.target.value === "" ? undefined : Number(e.target.value))
+            }
+          />
+        </label>
+        <label className="text-sm block">
+          System type
+          <select
+            className="border rounded px-2 py-1 w-full mt-1"
+            value={systemType}
+            onChange={(e) => setSystemType(e.target.value as SystemType)}
+          >
+            <option value="open-pond">Open pond (some water exchange)</option>
+            <option value="closed-system">Closed system (RAS/biofloc, minimal exchange)</option>
+          </select>
+        </label>
+      </fieldset>
 
       <button className="bg-slate-900 text-white rounded px-4 py-2" onClick={handleRun}>
         Run diagnosis

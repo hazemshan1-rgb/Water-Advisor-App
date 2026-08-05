@@ -53,6 +53,12 @@ export interface Site {
   createdAt: string; // ISO date
 }
 
+// Ch.16 §3: whether a system exchanges water at all changes the LCSM-vs-RSS
+// recommendation. "closed-system" = RAS/biofloc running months with
+// near-zero exchange; "open-pond" = anything with meaningful exchange,
+// rainfall, or soil contact -- the default this app assumes if unset.
+export type SystemType = "open-pond" | "closed-system";
+
 export interface Analysis {
   id: string;
   siteId: string;
@@ -60,6 +66,10 @@ export interface Analysis {
   parameters: WaterParameters;
   targetSpeciesIds: string[]; // 1 = single-species, 2+ = IMTA
   volumeM3?: number;
+  // When set and above parameters.salinityPpt, triggers a salt-build plan
+  // (see engine/saltBuilder.ts) alongside the usual correction dosingPlan.
+  targetSalinityPpt?: number;
+  systemType?: SystemType;
   diagnosisSnapshot?: DiagnosisResult;
   notes?: string;
 }
@@ -131,6 +141,24 @@ export interface DosingStep {
   instructions: string;
 }
 
+// Ch.16 §1-2: LCSM and pure sea salt (RSS) need almost identical total mass
+// per ppt (~1 kg/m3) -- they differ in composition/cost, not quantity. See
+// data/saltFormulations.ts for the verified per-compound table.
+export type SaltSource = "lcsm" | "sea-salt";
+
+export interface SaltBuildStep {
+  compound: string;
+  quantity: number;
+  unit: "kg" | "L";
+}
+
+export interface SaltBuildPlan {
+  recommendedSource: SaltSource;
+  recommendationReason: string;
+  pptToRaise: number;
+  steps: SaltBuildStep[];
+}
+
 export interface DiagnosisResult {
   sourceAnomalies: Anomaly[];
   perSpecies: Record<string, { riskLevel: "low" | "moderate" | "high"; deviations: Anomaly[] }>;
@@ -140,6 +168,10 @@ export interface DiagnosisResult {
   // Present only when dosingPlan is non-empty; explains the staging
   // protocol's provenance once rather than repeating it per line item.
   dosingProtocolNote?: string;
+  // Present only when Analysis.targetSalinityPpt is set and above the
+  // current reading -- a separate question from dosingPlan's mineral
+  // correction (see engine/saltBuilder.ts).
+  saltBuildPlan?: SaltBuildPlan;
   confidence: Confidence;
   confidenceReasons: string[];
   // One entry per diagnostically-relevant field that wasn't provided,

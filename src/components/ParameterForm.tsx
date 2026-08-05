@@ -15,6 +15,11 @@ const FIELDS: { key: keyof WaterParameters; label: string; required?: boolean }[
   { key: "hardnessMgL", label: "Hardness (mg/L)" },
   { key: "tdsMgL", label: "TDS (mg/L)" },
   { key: "temperatureC", label: "Temperature (°C)" },
+  { key: "ironMgL", label: "Iron (mg/L)" },
+  { key: "manganeseMgL", label: "Manganese (mg/L)" },
+  { key: "hydrogenSulfideMgL", label: "Hydrogen sulfide (mg/L)" },
+  { key: "arsenicMgL", label: "Arsenic (mg/L)" },
+  { key: "ammoniumMgL", label: "Ammonium (mg/L)" },
 ];
 
 export function ParameterForm({

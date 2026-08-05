@@ -107,6 +107,50 @@ describe("runDiagnosis", () => {
     expect(result.dosingPlan.some((s) => s.instructions.includes("5-10 ppt"))).toBe(true);
   });
 
+  it("produces a salt build plan when targetSalinityPpt is set above the current reading", () => {
+    const analysis: Analysis = {
+      id: "test-8",
+      siteId: "site-1",
+      date: "2026-08-05",
+      parameters: { salinityPpt: 0, pH: 7.5 },
+      targetSpeciesIds: ["vannamei"],
+      volumeM3: 10_000,
+      targetSalinityPpt: 5,
+    };
+    const result = runDiagnosis(analysis);
+    expect(result.saltBuildPlan).toBeDefined();
+    expect(result.saltBuildPlan?.recommendedSource).toBe("lcsm");
+    expect(result.saltBuildPlan?.pptToRaise).toBe(5);
+  });
+
+  it("recommends sea salt for a closed system when building salinity", () => {
+    const analysis: Analysis = {
+      id: "test-9",
+      siteId: "site-1",
+      date: "2026-08-05",
+      parameters: { salinityPpt: 0, pH: 7.5 },
+      targetSpeciesIds: ["vannamei"],
+      volumeM3: 10_000,
+      targetSalinityPpt: 5,
+      systemType: "closed-system",
+    };
+    const result = runDiagnosis(analysis);
+    expect(result.saltBuildPlan?.recommendedSource).toBe("sea-salt");
+  });
+
+  it("omits saltBuildPlan entirely when targetSalinityPpt is not provided", () => {
+    const analysis: Analysis = {
+      id: "test-10",
+      siteId: "site-1",
+      date: "2026-08-05",
+      parameters: { salinityPpt: 15, pH: 7.8 },
+      targetSpeciesIds: ["vannamei"],
+      volumeM3: 10_000,
+    };
+    const result = runDiagnosis(analysis);
+    expect(result.saltBuildPlan).toBeUndefined();
+  });
+
   it("does not crash or silently reconcile a physically unusual contradiction (high salinity, critically low chloride)", () => {
     const analysis: Analysis = {
       id: "test-7",

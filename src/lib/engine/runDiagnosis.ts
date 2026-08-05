@@ -5,13 +5,14 @@ import { checkImtaCompatibility } from "./imtaCompatibility";
 import { matchFailureModes } from "./failureModeMatching";
 import { stageDosing } from "./stagedDosing";
 import { computeConfidence } from "./confidence";
+import { buildSalinityDose } from "./saltBuilder";
 import { DOSING_RECIPES } from "../data/dosingRecipes";
 
 const DOSING_PROTOCOL_NOTE =
   "Doses below are split into two stages rather than applied all at once. Stage 1 delivers roughly half the total correction; stage 2 (the remainder) should only be applied after retesting confirms stage 1 moved the reading toward target without overshooting. The stage split itself is a conservative engineering safety practice, not a number cited from the guide — no published safe correction-rate figure was found for shrimp pond mineral dosing (see the app's stress-test log).";
 
 export function runDiagnosis(analysis: Analysis): DiagnosisResult {
-  const { parameters, targetSpeciesIds, volumeM3 } = analysis;
+  const { parameters, targetSpeciesIds, volumeM3, targetSalinityPpt, systemType } = analysis;
 
   const sourceAnomalies = characterizeSource(parameters);
   const perSpecies = checkSpeciesCompatibility(parameters, targetSpeciesIds);
@@ -30,6 +31,11 @@ export function runDiagnosis(analysis: Analysis): DiagnosisResult {
   const dosingPlan = stageDosing(rawDoses);
   const { confidence, confidenceReasons, dataGaps } = computeConfidence(parameters);
 
+  const saltBuildPlan =
+    targetSalinityPpt !== undefined
+      ? (buildSalinityDose(parameters.salinityPpt, targetSalinityPpt, volumeM3 ?? 0, systemType) ?? undefined)
+      : undefined;
+
   return {
     sourceAnomalies,
     perSpecies,
@@ -37,6 +43,7 @@ export function runDiagnosis(analysis: Analysis): DiagnosisResult {
     matchedFailureModes,
     dosingPlan,
     dosingProtocolNote: dosingPlan.length > 0 ? DOSING_PROTOCOL_NOTE : undefined,
+    saltBuildPlan,
     confidence,
     confidenceReasons,
     dataGaps,

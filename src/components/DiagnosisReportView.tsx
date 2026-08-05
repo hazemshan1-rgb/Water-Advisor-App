@@ -200,6 +200,40 @@ export function DiagnosisReportView({ diagnosis }: { diagnosis: DiagnosisResult 
         </section>
       )}
 
+      {diagnosis.saltBuildPlan && (
+        <section>
+          <h2 className="font-semibold mb-2">Salinity build plan</h2>
+          <p className="text-sm mb-2">
+            Raising salinity by <span className="font-medium">{diagnosis.saltBuildPlan.pptToRaise} ppt</span> using{" "}
+            <span className="font-medium">
+              {diagnosis.saltBuildPlan.recommendedSource === "lcsm"
+                ? "a low-cost salt mixture (LCSM)"
+                : "reconstituted sea salt (RSS)"}
+            </span>
+            .
+          </p>
+          <p className="text-xs text-slate-500 mb-2 italic">{diagnosis.saltBuildPlan.recommendationReason}</p>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="text-left border-b">
+                <th className="py-1">Compound</th>
+                <th className="py-1">Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {diagnosis.saltBuildPlan.steps.map((s, i) => (
+                <tr key={i} className="border-b">
+                  <td className="py-1">{s.compound}</td>
+                  <td className="py-1">
+                    {s.quantity} {s.unit}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       {diagnosis.dosingPlan.length > 0 && (
         <section>
           <h2 className="font-semibold mb-2">Dosing plan</h2>
