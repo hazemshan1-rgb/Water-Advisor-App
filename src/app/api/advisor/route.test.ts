@@ -69,4 +69,29 @@ describe("POST /api/advisor", () => {
     const callArgs = mockCreate.mock.calls[0][0];
     expect(JSON.stringify(callArgs)).toContain("ultra-low-1-5");
   });
+
+  it("returns 400 for invalid JSON request body", async () => {
+    const req = new Request("http://localhost/api/advisor", {
+      method: "POST",
+      body: "not valid json",
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("invalid request body");
+  });
+
+  it("returns 502 when extract mode receives non-JSON response from Claude", async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: "text", text: "Sure, here's the data: {salinityPpt: 2} (no proper JSON)" }],
+    });
+    const req = new Request("http://localhost/api/advisor", {
+      method: "POST",
+      body: JSON.stringify({ mode: "extract", rawText: "Salinity: 2 ppt" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("failed to parse extracted parameters");
+  });
 });

@@ -22,8 +22,12 @@ async function handleExtract(client: Anthropic, rawText: string): Promise<Respon
   });
 
   const text = extractText(message);
-  const parameters: Partial<WaterParameters> = JSON.parse(text);
-  return Response.json({ parameters });
+  try {
+    const parameters: Partial<WaterParameters> = JSON.parse(text);
+    return Response.json({ parameters });
+  } catch {
+    return Response.json({ error: "failed to parse extracted parameters" }, { status: 502 });
+  }
 }
 
 async function handleChat(
@@ -56,14 +60,18 @@ ${speciesContext}`;
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const body = await req.json();
-  const client = new Anthropic();
+  try {
+    const body = await req.json();
+    const client = new Anthropic();
 
-  if (body.mode === "extract") {
-    return handleExtract(client, body.rawText);
+    if (body.mode === "extract") {
+      return handleExtract(client, body.rawText);
+    }
+    if (body.mode === "chat") {
+      return handleChat(client, body.analysis, body.diagnosis, body.userMessage);
+    }
+    return Response.json({ error: "unrecognised mode" }, { status: 400 });
+  } catch {
+    return Response.json({ error: "invalid request body" }, { status: 400 });
   }
-  if (body.mode === "chat") {
-    return handleChat(client, body.analysis, body.diagnosis, body.userMessage);
-  }
-  return Response.json({ error: "unrecognised mode" }, { status: 400 });
 }
