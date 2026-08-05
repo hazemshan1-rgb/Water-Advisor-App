@@ -59,8 +59,11 @@ export function classifySourceBySalinity(salinityPpt: number): SalinityClassific
   };
 }
 
-// Ch.2 §3 Red-Flag Threshold Table — only rows that map onto fields present
-// in WaterParameters (Fe/Mn/H2S/arsenic are out of scope, see plan's Global Constraints).
+// Ch.2 §3 Red-Flag Threshold Table, in full. Fe/Mn/H2S/arsenic/ammonium
+// were previously out of scope (see plan's Global Constraints) but are
+// brought in here because Ch.2 §4's own decision tree gates on Fe/Mn/H2S
+// and arsenic BEFORE salinity classification even runs -- omitting them
+// meant the app skipped the guide's own first branch.
 export const RED_FLAG_THRESHOLDS = {
   hardnessToAlkalinityWatchRatio: 2,
   hardnessToAlkalinityActionRatio: 3,
@@ -70,4 +73,14 @@ export const RED_FLAG_THRESHOLDS = {
   magnesiumFloorAtLowSalinityMgL: 3, // at 1-5 ppt target
   chlorideWatchMgLAtLowSalinity: 300, // salinity < 5 ppt
   chlorideActionMgLAtLowSalinity: 150,
+  ironWatchMgL: 0.1,
+  ironActionMgL: 0.3,
+  manganeseWatchMgL: 0.05,
+  manganeseActionMgL: 0.1,
+  // H2S: the guide's own table uses "any detectable" for BOTH the watch and
+  // action columns -- there is no meaningful two-tier split to encode, so
+  // checkSourceRedFlags treats any H2S > 0 as a single critical-severity flag.
+  arsenicWatchMgL: 0.01,
+  ammoniumWatchMgL: 0.5,
+  ammoniumActionMgL: 1,
 } as const;

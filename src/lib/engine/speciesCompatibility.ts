@@ -1,4 +1,4 @@
-import type { WaterParameters, DiagnosisResult } from "../types";
+import type { Anomaly, WaterParameters, DiagnosisResult } from "../types";
 import { getSpeciesById } from "../data/species";
 
 const RATIO_TOLERANCE_FRACTION = 0.25; // +/-25% of target ratio before flagging as a deviation
@@ -13,27 +13,30 @@ export function checkSpeciesCompatibility(
     const species = getSpeciesById(id);
     if (!species) continue;
 
-    const deviations: string[] = [];
+    const deviations: Anomaly[] = [];
     const [minPpt, maxPpt] = species.salinityToleranceRangePpt;
     if (params.salinityPpt < minPpt || params.salinityPpt > maxPpt) {
-      deviations.push(
-        `salinity ${params.salinityPpt} ppt is outside ${species.commonName}'s tolerance range of ${minPpt}-${maxPpt} ppt.`
-      );
+      deviations.push({
+        message: `salinity ${params.salinityPpt} ppt is outside ${species.commonName}'s tolerance range of ${minPpt}-${maxPpt} ppt.`,
+        severity: "critical",
+      });
     }
 
     const targetNaK = species.idealIonicRatios["Na:K"];
     if (targetNaK !== undefined && params.sodiumMgL !== undefined && params.potassiumMgL !== undefined) {
       if (params.potassiumMgL === 0) {
-        deviations.push(
-          `potassium reading is 0 mg/L — Na:K ratio cannot be computed and this is itself a critical deviation from ${species.commonName}'s target of ${targetNaK}:1.`
-        );
+        deviations.push({
+          message: `potassium reading is 0 mg/L — Na:K ratio cannot be computed and this is itself a critical deviation from ${species.commonName}'s target of ${targetNaK}:1.`,
+          severity: "critical",
+        });
       } else {
         const actualRatio = params.sodiumMgL / params.potassiumMgL;
         const deviationFraction = Math.abs(actualRatio - targetNaK) / targetNaK;
         if (deviationFraction > RATIO_TOLERANCE_FRACTION) {
-          deviations.push(
-            `Na:K ratio is ${actualRatio.toFixed(1)}:1, versus ${species.commonName}'s target of ${targetNaK}:1 (Ch.3 Part 2).`
-          );
+          deviations.push({
+            message: `Na:K ratio is ${actualRatio.toFixed(1)}:1, versus ${species.commonName}'s target of ${targetNaK}:1 (Ch.3 Part 2).`,
+            severity: "action",
+          });
         }
       }
     }

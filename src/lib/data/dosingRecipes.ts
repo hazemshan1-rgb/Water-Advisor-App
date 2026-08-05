@@ -46,26 +46,50 @@ const EPSOM_MAGNESIUM_FRACTION = 0.099; // Magnesium sulfate heptahydrate is ~9.
 
 /**
  * Ch.3 Part 3: target = full-strength value * (targetSalinityPpt / 35).
- * Only valid for the standard 10-<30 ppt band -- Ch.3's own stated scope,
- * and below the point where Ch.2 Section 4 routes a source to Ch.10
- * (dilution/ratio correction, not fortification) instead.
+ * The guide states this is only valid for the standard 10-<30 ppt band.
+ * Exposed without that floor so the 5-<10 ppt gap-band fallback below can
+ * reuse the same proportional maths at the source's actual salinity.
  */
-function calculateProportionalTarget(fullStrengthMgL: number, salinityPpt: number): number | null {
-  if (salinityPpt < 10 || salinityPpt >= 30) return null;
+function calculateProportionalTarget(fullStrengthMgL: number, salinityPpt: number): number {
   return fullStrengthMgL * (salinityPpt / 35);
+}
+
+export interface ResolvedTarget {
+  targetMgL: number;
+  // true only for the 5-<10 ppt band the guide's own decision tree never
+  // resolves (Ch.2 §4). Not a guide-sourced number -- see the comment below.
+  isGapBandFallback: boolean;
 }
 
 /**
  * Resolves a target for the given ion across both salinity strategies:
  * proportional scaling at >=10-<30 ppt (Ch.3), absolute floor at 1-<5 ppt
- * (Ch.6 Section 2). Returns null for the 5-<10 ppt gap, <1 ppt zero-edge
- * case, and >=30 ppt hypersaline sources -- none of which have a defined
- * target in the source material for this kind of fortification dosing.
+ * (Ch.6 Section 2). Returns null for the <1 ppt zero-edge case and >=30 ppt
+ * hypersaline sources -- neither has a defined target in the source
+ * material for this kind of fortification dosing, and guessing one would
+ * be exactly the "invented number" failure mode this app is built to avoid.
+ *
+ * The 5-<10 ppt gap is different: it's genuinely unresolved in the guide's
+ * own decision tree, but returning nothing here means a real farm in that
+ * band gets no dosing guidance at all, which is worse than a disclosed
+ * conservative estimate. The fallback takes max(Ch.3's proportional value
+ * at the source's actual salinity, Ch.6's absolute floor) -- i.e. whichever
+ * chapter's rule would ask for MORE correction, on the reasoning that
+ * under-dosing K/Mg is the documented failure mode (molt failure), so the
+ * safer wrong guess is the higher one. This is a disclosed engineering
+ * choice, not a citation -- isGapBandFallback flags it so the UI can say so.
  */
-function resolveTargetMgL(fullStrengthMgL: number, lowSalinityFloorMgL: number, salinityPpt: number): number | null {
-  const proportional = calculateProportionalTarget(fullStrengthMgL, salinityPpt);
-  if (proportional !== null) return proportional;
-  if (salinityPpt >= 1 && salinityPpt < 5) return lowSalinityFloorMgL;
+function resolveTargetMgL(fullStrengthMgL: number, lowSalinityFloorMgL: number, salinityPpt: number): ResolvedTarget | null {
+  if (salinityPpt >= 10 && salinityPpt < 30) {
+    return { targetMgL: calculateProportionalTarget(fullStrengthMgL, salinityPpt), isGapBandFallback: false };
+  }
+  if (salinityPpt >= 1 && salinityPpt < 5) {
+    return { targetMgL: lowSalinityFloorMgL, isGapBandFallback: false };
+  }
+  if (salinityPpt >= 5 && salinityPpt < 10) {
+    const proportional = calculateProportionalTarget(fullStrengthMgL, salinityPpt);
+    return { targetMgL: Math.max(proportional, lowSalinityFloorMgL), isGapBandFallback: true };
+  }
   return null;
 }
 
@@ -86,27 +110,29 @@ function roundKg(kg: number): number {
 export function calculatePotassiumDose(
   params: WaterParameters,
   volumeM3: number,
-  targetMgL: number
-): { compound: string; quantityKg: number }[] {
+  targetMgL: number,
+  isGapBandFallback = false
+): { compound: string; quantityKg: number; isGapBandFallback?: boolean }[] {
   const currentK = params.potassiumMgL ?? 0;
   const shortfall = targetMgL - currentK;
   const kclNeededMgL = Math.max(0, shortfall) / KCL_POTASSIUM_FRACTION;
   const quantityKg = mgPerLShortfallToKg(kclNeededMgL, volumeM3);
 
-  return [{ compound: "Potassium chloride (KCl)", quantityKg: roundKg(quantityKg) }];
+  return [{ compound: "Potassium chloride (KCl)", quantityKg: roundKg(quantityKg), isGapBandFallback }];
 }
 
 export function calculateMagnesiumDose(
   params: WaterParameters,
   volumeM3: number,
-  targetMgL: number
-): { compound: string; quantityKg: number }[] {
+  targetMgL: number,
+  isGapBandFallback = false
+): { compound: string; quantityKg: number; isGapBandFallback?: boolean }[] {
   const currentMg = params.magnesiumMgL ?? 0;
   const shortfall = targetMgL - currentMg;
   const epsomNeededMgL = Math.max(0, shortfall) / EPSOM_MAGNESIUM_FRACTION;
   const quantityKg = mgPerLShortfallToKg(epsomNeededMgL, volumeM3);
 
-  return [{ compound: "Magnesium sulfate heptahydrate (Epsom salt)", quantityKg: roundKg(quantityKg) }];
+  return [{ compound: "Magnesium sulfate heptahydrate (Epsom salt)", quantityKg: roundKg(quantityKg), isGapBandFallback }];
 }
 
 export const DOSING_RECIPES: DosingRecipe[] = [
@@ -117,9 +143,9 @@ export const DOSING_RECIPES: DosingRecipe[] = [
     formula:
       "target_mgL = resolveTargetMgL(380, 20, salinityPpt); shortfall_mgL = target_mgL - current_mgL; KCl_mgL = shortfall_mgL / 0.50; quantity_kg = KCl_mgL * volume_m3 / 1000",
     calculate: (params, volumeM3) => {
-      const target = resolveTargetMgL(ION_FULL_STRENGTH_35PPT_MGL.potassium, LOW_SALINITY_FLOOR_MGL.potassium, params.salinityPpt);
-      if (target === null) return [];
-      return calculatePotassiumDose(params, volumeM3, target);
+      const resolved = resolveTargetMgL(ION_FULL_STRENGTH_35PPT_MGL.potassium, LOW_SALINITY_FLOOR_MGL.potassium, params.salinityPpt);
+      if (resolved === null) return [];
+      return calculatePotassiumDose(params, volumeM3, resolved.targetMgL, resolved.isGapBandFallback);
     },
   },
   {
@@ -129,9 +155,9 @@ export const DOSING_RECIPES: DosingRecipe[] = [
     formula:
       "target_mgL = resolveTargetMgL(1262, 15, salinityPpt); shortfall_mgL = target_mgL - current_mgL; Epsom_mgL = shortfall_mgL / 0.099; quantity_kg = Epsom_mgL * volume_m3 / 1000",
     calculate: (params, volumeM3) => {
-      const target = resolveTargetMgL(ION_FULL_STRENGTH_35PPT_MGL.magnesium, LOW_SALINITY_FLOOR_MGL.magnesium, params.salinityPpt);
-      if (target === null) return [];
-      return calculateMagnesiumDose(params, volumeM3, target);
+      const resolved = resolveTargetMgL(ION_FULL_STRENGTH_35PPT_MGL.magnesium, LOW_SALINITY_FLOOR_MGL.magnesium, params.salinityPpt);
+      if (resolved === null) return [];
+      return calculateMagnesiumDose(params, volumeM3, resolved.targetMgL, resolved.isGapBandFallback);
     },
   },
 ];

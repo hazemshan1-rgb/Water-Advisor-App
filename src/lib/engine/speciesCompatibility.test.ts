@@ -7,7 +7,7 @@ describe("checkSpeciesCompatibility", () => {
     const params: WaterParameters = { salinityPpt: 0.3, pH: 7.5 };
     const result = checkSpeciesCompatibility(params, ["vannamei"]);
     expect(result.vannamei.riskLevel).toBe("high");
-    expect(result.vannamei.deviations.some((d) => d.includes("salinity"))).toBe(true);
+    expect(result.vannamei.deviations.some((d) => d.message.includes("salinity"))).toBe(true);
   });
 
   it("reports low risk with no deviations when salinity is within tolerance and no ionic data given", () => {
@@ -20,7 +20,7 @@ describe("checkSpeciesCompatibility", () => {
     // Sodium far above target ratio relative to potassium (K critically low).
     const params: WaterParameters = { salinityPpt: 15, pH: 7.8, sodiumMgL: 4500, potassiumMgL: 20 };
     const result = checkSpeciesCompatibility(params, ["vannamei"]);
-    expect(result.vannamei.deviations.some((d) => d.includes("Na:K"))).toBe(true);
+    expect(result.vannamei.deviations.some((d) => d.message.includes("Na:K"))).toBe(true);
   });
 
   it("skips unknown species ids without throwing", () => {
@@ -32,7 +32,7 @@ describe("checkSpeciesCompatibility", () => {
   it("flags zero potassium as a critical deviation, not a silent skip", () => {
     const params: WaterParameters = { salinityPpt: 15, pH: 7.8, sodiumMgL: 4500, potassiumMgL: 0 };
     const result = checkSpeciesCompatibility(params, ["vannamei"]);
-    expect(result.vannamei.deviations.some((d) => d.includes("potassium reading is 0"))).toBe(true);
+    expect(result.vannamei.deviations.some((d) => d.message.includes("potassium reading is 0"))).toBe(true);
     expect(result.vannamei.riskLevel).toBe("moderate");
   });
 });

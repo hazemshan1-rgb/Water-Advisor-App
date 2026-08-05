@@ -60,10 +60,21 @@ describe("DOSING_RECIPES", () => {
     expect(result[0].quantityKg).toBeCloseTo(232, 0);
   });
 
-  it("returns no dose for potassium in the undefined 5-<10 ppt gap band", () => {
+  it("applies a disclosed conservative fallback for potassium in the undefined 5-<10 ppt gap band, rather than returning nothing", () => {
+    // target = max(Ch.3 proportional at 7 ppt = 380*(7/35) = 76, Ch.6 floor = 20) = 76
+    // shortfall = 76 - 5 = 71, KCl = 71/0.5 = 142 mg/L, qty = 142 * 10_000 / 1000 = 1420 kg
     const params: WaterParameters = { salinityPpt: 7, pH: 7.7, potassiumMgL: 5 };
     const recipe = DOSING_RECIPES.find((r) => r.id === "kcl-potassium-correction")!;
-    expect(recipe.calculate(params, 10_000)).toEqual([]);
+    const result = recipe.calculate(params, 10_000);
+    expect(result[0].quantityKg).toBeCloseTo(1420, 0);
+    expect(result[0].isGapBandFallback).toBe(true);
+  });
+
+  it("does not flag isGapBandFallback for the standard >=10 ppt band", () => {
+    const params: WaterParameters = { salinityPpt: 15, pH: 7.8, potassiumMgL: 8 };
+    const recipe = DOSING_RECIPES.find((r) => r.id === "kcl-potassium-correction")!;
+    const result = recipe.calculate(params, 10_000);
+    expect(result[0].isGapBandFallback).toBe(false);
   });
 
   it("returns no dose for potassium at hypersaline salinity (>=30 ppt) -- dilution problem, not fortification", () => {

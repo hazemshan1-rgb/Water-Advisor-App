@@ -20,6 +20,9 @@ export const FAILURE_MODES: FailureMode[] = [
       "Confirm magnesium independently rather than inferring it from a hardness reading (Ch.6 §6, 'The Hardness-Looks-Fine Trap').",
     ],
     sourceCitation: "Water Management Guide Ch.7 §6; Ch.6 §2 and §6",
+    // A molt-failure match is an action-level problem by definition — it
+    // means active, ongoing mortality, not a preventive watch item.
+    severity: "action",
   },
 ];
 
