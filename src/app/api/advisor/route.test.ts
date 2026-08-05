@@ -50,11 +50,14 @@ describe("POST /api/advisor", () => {
       targetSpeciesIds: ["vannamei"],
     };
     const diagnosis: DiagnosisResult = {
-      sourceAnomalies: ["Salinity band: ultra-low-1-5"],
+      sourceAnomalies: [{ message: "Salinity band: ultra-low-1-5", severity: "info" }],
       perSpecies: {},
       imtaNotes: [],
       matchedFailureModes: [],
       dosingPlan: [],
+      confidence: "high",
+      confidenceReasons: [],
+      dataGaps: [],
     };
 
     const req = new Request("http://localhost/api/advisor", {
