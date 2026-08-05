@@ -962,6 +962,8 @@ git commit -m "feat: add per-species compatibility engine step"
 
 Engine Step 5 (spec Section 4). Grounded in Chapter 3 Part 4's worked KCl example.
 
+> **Revised during implementation (fix round 1, human-approved):** the code below hardcodes a single potassium target of 163 mg/L, which is only correct at exactly 15 ppt salinity (it's the guide's own one worked example, not a universal constant). The task reviewer caught this; Hazem confirmed it should be fixed and extended to other correctable ions. The actual shipped implementation in `src/lib/data/dosingRecipes.ts` instead resolves a salinity-band-aware target for both potassium and magnesium: Ch.3 Part 3's proportional scaling (`fullStrength * (salinityPpt/35)`) for the 10-<30 ppt band, Ch.6 §2's fixed absolute floors (K 20 mg/L, Mg 15 mg/L) for the 1-<5 ppt band, and an honest `null` (no dose computed) for the undefined 5-<10 ppt gap, the <1 ppt zero-salinity edge case, and >=30 ppt hypersaline sources (a dilution problem per Ch.2 §4, not a fortification one). Calcium, sodium, and chloride were deliberately left out — no cited %-by-weight correction product exists for calcium in the guide, and sodium/chloride aren't independently fortified in Ch.3 Part 4's product table at all. See the SDD ledger (`Task 7` entries) and commits `b865d2d`/`998d7ec` for the full history. The code block below is kept as the historical record of the original (superseded) design — read `dosingRecipes.ts` itself for the real, current implementation.
+
 **Files:**
 - Create: `src/lib/data/dosingRecipes.ts`
 - Test: `src/lib/data/dosingRecipes.test.ts`
