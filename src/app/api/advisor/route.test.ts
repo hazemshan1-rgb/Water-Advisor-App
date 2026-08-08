@@ -84,6 +84,18 @@ describe("POST /api/advisor", () => {
     expect(body.error).toBe("invalid request body");
   });
 
+  it("returns a JSON 502 (not a bare 500) when the Anthropic call rejects", async () => {
+    mockCreate.mockRejectedValue(new Error("upstream auth failure"));
+    const req = new Request("http://localhost/api/advisor", {
+      method: "POST",
+      body: JSON.stringify({ mode: "chat", analysis: { id: "a1", siteId: "s1", date: "2026-08-05", parameters: { salinityPpt: 2, pH: 7.6 }, targetSpeciesIds: [] }, diagnosis: {}, userMessage: "hi" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("AI service request failed");
+  });
+
   it("returns 502 when extract mode receives non-JSON response from Claude", async () => {
     mockCreate.mockResolvedValue({
       content: [{ type: "text", text: "Sure, here's the data: {salinityPpt: 2} (no proper JSON)" }],

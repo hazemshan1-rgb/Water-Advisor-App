@@ -67,18 +67,24 @@ ${speciesContext}`;
 }
 
 export async function POST(req: Request): Promise<Response> {
+  let body: { mode?: string; rawText?: string; analysis?: Analysis; diagnosis?: DiagnosisResult; userMessage?: string };
   try {
-    const body = await req.json();
-    const client = new Anthropic();
+    body = await req.json();
+  } catch {
+    return Response.json({ error: "invalid request body" }, { status: 400 });
+  }
 
+  const client = new Anthropic();
+
+  try {
     if (body.mode === "extract") {
-      return handleExtract(client, body.rawText);
+      return await handleExtract(client, body.rawText ?? "");
     }
-    if (body.mode === "chat") {
-      return handleChat(client, body.analysis, body.diagnosis, body.userMessage);
+    if (body.mode === "chat" && body.analysis && body.diagnosis && body.userMessage) {
+      return await handleChat(client, body.analysis, body.diagnosis, body.userMessage);
     }
     return Response.json({ error: "unrecognised mode" }, { status: 400 });
   } catch {
-    return Response.json({ error: "invalid request body" }, { status: 400 });
+    return Response.json({ error: "AI service request failed" }, { status: 502 });
   }
 }

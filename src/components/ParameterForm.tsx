@@ -3,9 +3,9 @@
 
 import type { WaterParameters } from "@/lib/types";
 
-const FIELDS: { key: keyof WaterParameters; label: string; required?: boolean }[] = [
-  { key: "salinityPpt", label: "Salinity (ppt)", required: true },
-  { key: "pH", label: "pH", required: true },
+export const REQUIRED_PARAMETER_FIELDS: { key: keyof WaterParameters; label: string }[] = [
+  { key: "salinityPpt", label: "Salinity (ppt)" },
+  { key: "pH", label: "pH" },
   { key: "sodiumMgL", label: "Sodium (mg/L)" },
   { key: "potassiumMgL", label: "Potassium (mg/L)" },
   { key: "calciumMgL", label: "Calcium (mg/L)" },
@@ -25,6 +25,8 @@ const FIELDS: { key: keyof WaterParameters; label: string; required?: boolean }[
   { key: "doMgL", label: "Dissolved oxygen — dawn reading (mg/L)" },
 ];
 
+const FIELDS = REQUIRED_PARAMETER_FIELDS;
+
 export function ParameterForm({
   value,
   onChange,
@@ -36,11 +38,11 @@ export function ParameterForm({
     <div className="grid grid-cols-2 gap-3">
       {FIELDS.map((f) => (
         <label key={f.key} className="text-sm">
-          {f.label}
-          {f.required ? " *" : ""}
+          {f.label} *
           <input
             type="number"
             step="any"
+            required
             className="border rounded px-2 py-1 w-full mt-1"
             value={value[f.key] ?? ""}
             onChange={(e) =>

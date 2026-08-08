@@ -3,7 +3,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ParameterForm } from "@/components/ParameterForm";
+import { ParameterForm, REQUIRED_PARAMETER_FIELDS } from "@/components/ParameterForm";
 import { SpeciesPicker } from "@/components/SpeciesPicker";
 import { saveAnalysis } from "@/lib/db";
 import { runDiagnosis } from "@/lib/engine/runDiagnosis";
@@ -22,8 +22,9 @@ function NewAnalysisContent() {
   const [postlarvalAgeDays, setPostlarvalAgeDays] = useState<number | undefined>(undefined);
 
   async function handleRun() {
-    if (parameters.salinityPpt === undefined || parameters.pH === undefined) {
-      alert("Salinity and pH are required.");
+    const missing = REQUIRED_PARAMETER_FIELDS.filter((f) => parameters[f.key] === undefined);
+    if (missing.length > 0) {
+      alert(`All water parameters are required for an accurate diagnosis. Missing: ${missing.map((f) => f.label).join(", ")}.`);
       return;
     }
     const id = crypto.randomUUID();

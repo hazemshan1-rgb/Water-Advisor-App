@@ -24,10 +24,17 @@ export function ChatPanel({ analysis, diagnosis }: { analysis: Analysis; diagnos
     try {
       const res = await fetch("/api/advisor", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode: "chat", analysis, diagnosis, userMessage }),
       });
+      if (!res.ok) {
+        setMessages((prev) => [...prev, { role: "assistant", text: "Sorry, the advisor request failed. Try again in a moment." }]);
+        return;
+      }
       const body = await res.json();
       setMessages((prev) => [...prev, { role: "assistant", text: body.reply }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", text: "Sorry, the advisor request failed. Try again in a moment." }]);
     } finally {
       setLoading(false);
     }
