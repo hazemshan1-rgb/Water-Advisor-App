@@ -1,7 +1,7 @@
 // src/app/analysis/new/page.tsx
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ParameterForm, REQUIRED_PARAMETER_FIELDS } from "@/components/ParameterForm";
 import { SpeciesPicker } from "@/components/SpeciesPicker";
@@ -13,6 +13,7 @@ function NewAnalysisContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const siteId = searchParams.get("siteId") ?? "";
+  const intakeId = searchParams.get("intakeId");
 
   const [parameters, setParameters] = useState<Partial<WaterParameters>>({});
   const [speciesIds, setSpeciesIds] = useState<string[]>([]);
@@ -20,6 +21,24 @@ function NewAnalysisContent() {
   const [targetSalinityPpt, setTargetSalinityPpt] = useState<number | undefined>(undefined);
   const [systemType, setSystemType] = useState<SystemType>("open-pond");
   const [postlarvalAgeDays, setPostlarvalAgeDays] = useState<number | undefined>(undefined);
+  const [intakeNotes, setIntakeNotes] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!intakeId) return;
+    fetch(`/api/intake/${intakeId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { submission?: { parameters?: Partial<WaterParameters>; volume_m3?: number | null; notes?: string | null } } | null) => {
+        const submission = data?.submission;
+        if (!submission) return;
+        if (submission.parameters) setParameters(submission.parameters);
+        if (submission.volume_m3 != null) setVolumeM3(submission.volume_m3);
+        if (submission.notes) setIntakeNotes(submission.notes);
+      })
+      .catch(() => {
+        // Prefill is a convenience, not a requirement -- the form still
+        // works blank if the intake fetch fails.
+      });
+  }, [intakeId]);
 
   async function handleRun() {
     const missing = REQUIRED_PARAMETER_FIELDS.filter((f) => parameters[f.key] === undefined);
@@ -38,6 +57,7 @@ function NewAnalysisContent() {
       targetSalinityPpt,
       systemType,
       postlarvalAgeDays,
+      notes: intakeNotes,
     };
     const diagnosisSnapshot = runDiagnosis(analysis);
     await saveAnalysis({ ...analysis, diagnosisSnapshot });
@@ -47,6 +67,13 @@ function NewAnalysisContent() {
   return (
     <main className="max-w-2xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-semibold">New Analysis</h1>
+
+      {intakeNotes && (
+        <div className="border border-slate-300 bg-slate-50 rounded p-3 text-sm">
+          <p className="font-medium text-slate-700 mb-1">Client notes from intake</p>
+          <p className="text-slate-600 whitespace-pre-wrap">{intakeNotes}</p>
+        </div>
+      )}
 
       <ParameterForm value={parameters} onChange={setParameters} />
 

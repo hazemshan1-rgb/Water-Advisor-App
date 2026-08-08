@@ -1,40 +1,70 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import type { WaterParameters } from "@/lib/types";
 
-// Jotform's webhook POSTs multipart/form-data (not JSON), with rawRequest
-// itself a JSON string keyed by internal question id, e.g.
-// {"q3_fullName": {"first": "A", "last": "B"}, "q4_email": "a@b.com"}.
-// See https://api.jotform.com/docs/#webhooks.
+// Field IDs from the live Jotform form "Water Quality Data Submission"
+// (https://form.jotform.com/262195460671056), read via
+// GET form/262195460671056/questions. Jotform auto-generates these names at
+// creation time -- rebuilding the form means regenerating this map.
+const FORM_ID = "262195460671056";
+
+const CLIENT_NAME_FIELD = "q3_textbox1";
+const SITE_NAME_FIELD = "q4_textbox2";
+const EMAIL_FIELD = "q5_email3";
+const TEST_DATE_FIELD = "q6_datetime4";
+const VOLUME_FIELD = "q30_number28";
+const NOTES_FIELD = "q31_textarea29";
+
+const PARAMETER_FIELD_MAP: Record<string, keyof WaterParameters> = {
+  q8_number6: "salinityPpt",
+  q9_number7: "pH",
+  q10_number8: "temperatureC",
+  q12_number10: "sodiumMgL",
+  q13_number11: "potassiumMgL",
+  q14_number12: "calciumMgL",
+  q15_number13: "magnesiumMgL",
+  q16_number14: "chlorideMgL",
+  q17_number15: "alkalinityMgL",
+  q18_number16: "hardnessMgL",
+  q19_number17: "tdsMgL",
+  q21_number19: "ironMgL",
+  q22_number20: "manganeseMgL",
+  q23_number21: "hydrogenSulfideMgL",
+  q24_number22: "arsenicMgL",
+  q25_number23: "ammoniumMgL",
+  q26_number24: "tanMgL",
+  q27_number25: "nitriteMgL",
+  q28_number26: "doMgL",
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function flattenAnswerText(value: unknown): string | undefined {
-  if (typeof value === "string") return value;
-  if (isRecord(value)) {
-    const parts = Object.values(value).filter((v): v is string => typeof v === "string");
-    if (parts.length) return parts.join(" ");
-  }
+// Jotform's rawRequest gives number fields as plain numeric strings and
+// text/email fields as plain strings; a lite datetime field comes back as a
+// single formatted string. Anything else (e.g. an unexpected object shape)
+// is treated as absent rather than guessed at.
+function asString(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim() !== "") return value.trim();
   return undefined;
 }
 
-// Jotform's rawRequest doesn't cleanly separate "which field is the email
-// field" -- it's keyed by internal ids like "q4_email3". This is a
-// best-effort label match, not a guaranteed extraction; the full answers
-// blob is stored regardless so nothing is lost if this misses.
-function extractContact(rawRequest: Record<string, unknown>): { name?: string; email?: string } {
-  let name: string | undefined;
-  let email: string | undefined;
+function asNumber(value: unknown): number | undefined {
+  const str = asString(value);
+  if (str === undefined) return undefined;
+  const num = Number(str);
+  return Number.isFinite(num) ? num : undefined;
+}
 
-  for (const [key, value] of Object.entries(rawRequest)) {
-    const lowerKey = key.toLowerCase();
-    const text = flattenAnswerText(value);
-    if (!text) continue;
-
-    if (!email && lowerKey.includes("email")) email = text.trim();
-    if (!name && (lowerKey.includes("name") || lowerKey.includes("fullname"))) name = text.trim();
+function extractParameters(answers: Record<string, unknown>): Partial<WaterParameters> {
+  const parameters: Partial<WaterParameters> = {};
+  for (const [fieldId, key] of Object.entries(PARAMETER_FIELD_MAP)) {
+    const num = asNumber(answers[fieldId]);
+    if (num !== undefined) {
+      (parameters as Record<string, number>)[key] = num;
+    }
   }
-
-  return { name, email };
+  return parameters;
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -55,10 +85,12 @@ export async function POST(req: Request): Promise<Response> {
   const submissionId = form.get("submissionID")?.toString();
   const formId = form.get("formID")?.toString();
   const rawRequestText = form.get("rawRequest")?.toString();
-  const prettySummary = form.get("pretty")?.toString();
 
   if (!submissionId || !formId || !rawRequestText) {
     return Response.json({ error: "missing required Jotform fields" }, { status: 400 });
+  }
+  if (formId !== FORM_ID) {
+    return Response.json({ error: "unexpected form id" }, { status: 400 });
   }
 
   let answers: Record<string, unknown>;
@@ -70,7 +102,7 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "failed to parse rawRequest" }, { status: 400 });
   }
 
-  const { name, email } = extractContact(answers);
+  const parameters = extractParameters(answers);
 
   try {
     const supabase = getSupabaseAdmin();
@@ -78,10 +110,14 @@ export async function POST(req: Request): Promise<Response> {
       {
         jotform_submission_id: submissionId,
         jotform_form_id: formId,
-        answers,
-        pretty_summary: prettySummary ?? null,
-        contact_name: name ?? null,
-        contact_email: email ?? null,
+        client_name: asString(answers[CLIENT_NAME_FIELD]) ?? null,
+        site_name: asString(answers[SITE_NAME_FIELD]) ?? null,
+        contact_email: asString(answers[EMAIL_FIELD]) ?? null,
+        test_date: asString(answers[TEST_DATE_FIELD]) ?? null,
+        parameters,
+        volume_m3: asNumber(answers[VOLUME_FIELD]) ?? null,
+        notes: asString(answers[NOTES_FIELD]) ?? null,
+        raw_payload: answers,
       },
       { onConflict: "jotform_submission_id" }
     );

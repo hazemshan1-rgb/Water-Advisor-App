@@ -2,14 +2,16 @@
 // Server component only -- reads via the service-role Supabase client
 // (src/lib/supabaseAdmin.ts), which must never run in the browser.
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { ImportButton } from "@/components/ImportButton";
 
 export const dynamic = "force-dynamic";
 
 interface IntakeSubmission {
   id: string;
-  contact_name: string | null;
+  client_name: string | null;
+  site_name: string | null;
   contact_email: string | null;
-  pretty_summary: string | null;
+  test_date: string | null;
   status: string;
   received_at: string;
 }
@@ -22,7 +24,7 @@ export default async function IntakePage() {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("intake_submissions")
-      .select("id, contact_name, contact_email, pretty_summary, status, received_at")
+      .select("id, client_name, site_name, contact_email, test_date, status, received_at")
       .order("received_at", { ascending: false });
     if (error) throw error;
     submissions = data ?? [];
@@ -48,17 +50,19 @@ export default async function IntakePage() {
       ) : (
         <ul className="divide-y">
           {submissions.map((s) => (
-            <li key={s.id} className="py-4 space-y-1">
-              <div className="flex justify-between text-xs text-slate-500">
-                <span>{new Date(s.received_at).toLocaleString()}</span>
-                <span className="uppercase tracking-wide">{s.status}</span>
+            <li key={s.id} className="py-4 flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex gap-2 text-xs text-slate-500">
+                  <span>{new Date(s.received_at).toLocaleString()}</span>
+                  <span className="uppercase tracking-wide">{s.status}</span>
+                </div>
+                <p className="font-medium">{s.client_name ?? "Unknown client"}</p>
+                <p className="text-sm text-slate-600">
+                  {s.site_name ?? "no site name"} &middot; {s.contact_email ?? "no email"}
+                  {s.test_date ? ` · tested ${s.test_date}` : ""}
+                </p>
               </div>
-              <p className="font-medium">
-                {s.contact_name ?? "Unknown"} &mdash; {s.contact_email ?? "no email"}
-              </p>
-              {s.pretty_summary && (
-                <pre className="text-sm text-slate-700 whitespace-pre-wrap">{s.pretty_summary}</pre>
-              )}
+              <ImportButton submissionId={s.id} siteName={s.site_name} />
             </li>
           ))}
         </ul>
