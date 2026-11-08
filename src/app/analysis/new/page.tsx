@@ -24,6 +24,17 @@ function NewAnalysisContent() {
   const [intakeNotes, setIntakeNotes] = useState<string | undefined>(undefined);
 
   useEffect(() => {
+    if (searchParams.get("packet") === "1" && siteId) {
+      try {
+        const raw = sessionStorage.getItem(`water-review-prefill:${siteId}`);
+        if (raw) {
+          const prefill = JSON.parse(raw);
+          setParameters(prefill.parameters ?? {});
+          if (prefill.volumeM3 !== undefined) setVolumeM3(prefill.volumeM3);
+          setIntakeNotes(prefill.notes);
+        }
+      } catch { /* A missing draft leaves the manual analysis form available. */ }
+    }
     if (!intakeId) return;
     fetch(`/api/intake/${intakeId}`)
       .then((res) => (res.ok ? res.json() : null))
@@ -38,12 +49,12 @@ function NewAnalysisContent() {
         // Prefill is a convenience, not a requirement -- the form still
         // works blank if the intake fetch fails.
       });
-  }, [intakeId]);
+  }, [intakeId, siteId, searchParams]);
 
   async function handleRun() {
     const missing = REQUIRED_PARAMETER_FIELDS.filter((f) => parameters[f.key] === undefined);
     if (missing.length > 0) {
-      alert(`All water parameters are required for an accurate diagnosis. Missing: ${missing.map((f) => f.label).join(", ")}.`);
+      alert(`Complete the configured required parameters before running the analysis. Missing: ${missing.map((f) => f.label).join(", ")}.`);
       return;
     }
     const id = crypto.randomUUID();
@@ -61,6 +72,7 @@ function NewAnalysisContent() {
     };
     const diagnosisSnapshot = runDiagnosis(analysis);
     await saveAnalysis({ ...analysis, diagnosisSnapshot });
+    sessionStorage.removeItem(`water-review-prefill:${siteId}`);
     router.push(`/analysis/${id}`);
   }
 
@@ -145,3 +157,4 @@ export default function NewAnalysisPage() {
     </Suspense>
   );
 }
+

@@ -1,6 +1,7 @@
 // src/app/intake/page.tsx
 // Server component only -- reads via the service-role Supabase client
 // (src/lib/supabaseAdmin.ts), which must never run in the browser.
+import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { ImportButton } from "@/components/ImportButton";
 
@@ -35,7 +36,7 @@ export default async function IntakePage() {
   if (loadError) {
     return (
       <main className="max-w-2xl mx-auto p-6 space-y-2">
-        <h1 className="text-2xl font-semibold">Intake</h1>
+        <h1 className="text-2xl font-semibold">Intake</h1><Link href="/intake/packet" className="inline-block underline py-3">Import a website review packet →</Link>
         <p className="text-sm text-amber-700">Supabase isn&apos;t configured yet: {loadError}</p>
       </main>
     );
@@ -43,7 +44,7 @@ export default async function IntakePage() {
 
   return (
     <main className="max-w-2xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Intake submissions</h1>
+      <h1 className="text-2xl font-semibold">Intake submissions</h1><Link href="/intake/packet" className="inline-block underline py-3">Import a website review packet →</Link>
 
       {submissions.length === 0 ? (
         <p className="text-slate-500">No submissions yet.</p>
@@ -70,3 +71,4 @@ export default async function IntakePage() {
     </main>
   );
 }
+
